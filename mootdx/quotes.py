@@ -48,13 +48,22 @@ class Quotes(object):
 def valid_server(server):
     import ipaddress
 
-    if isinstance(server, tuple) or isinstance(server, list):
+    if isinstance(server, str) and ':' in server:
+        parts = server.strip().split(':')
+        if len(parts) == 2:
+            try:
+                ipaddress.ip_address(parts[0])
+                return parts[0], int(parts[1])
+            except Exception:
+                pass
+
+    if isinstance(server, (tuple, list)):
         try:
             address, port = server
-            ipaddress.ip_address(address)
-            return address, int(port)
+            ipaddress.ip_address(str(address))
+            return str(address), int(port)
         except Exception:
-            raise ValueError('Server 格式错误. 例如: server = ("127.0.0.1", 2272)')
+            raise ValueError('Server 格式错误. 例如: server = ("127.0.0.1", 7709) 或 "127.0.0.1:7709"')
 
     return None
 
@@ -141,15 +150,16 @@ class StdQuotes(BaseQuotes):
         """
 
         super().__init__(bestip=bestip, timeout=timeout, server=server, **kwargs)
-        self.server and config.set('BESTIP', {'HQ': self.server})
 
-        try:
-            config.get('SERVER').get('HQ')[0]
-        except ValueError as ex:
-            logger.warning(ex)
-        finally:
-            default = config.get('SERVER').get('HQ')[0][1:]
-            self.server = config.get('BESTIP').get('HQ', default)
+        if self.server:
+            config.set('BESTIP', {'HQ': self.server})
+
+        bestip_val = config.get('BESTIP').get('HQ') if config.get('BESTIP') else None
+        if bestip_val and isinstance(bestip_val, (tuple, list)) and len(bestip_val) == 2:
+            self.server = tuple(bestip_val)
+        else:
+            hq_list = config.get('SERVER', {}).get('HQ', [])
+            self.server = tuple(hq_list[0][1:]) if hq_list else ('110.41.147.114', 7709)
 
         logger.debug(f'server: {self.server}')
         ip, port = self.server
@@ -514,17 +524,18 @@ class ExtQuotes(BaseQuotes):
         :param kwargs:  可变参数
         """
         super().__init__(bestip=bestip, timeout=timeout, server=server, **kwargs)
-        self.server and config.set('BESTIP', {'EX': self.server})
+
+        if self.server:
+            config.set('BESTIP', {'EX': self.server})
 
         logger.warning('目前扩展市场行情接口已经失效, 后期有望修复.')
 
-        try:
-            config.get('SERVER').get('EX')[0]
-        except ValueError as ex:
-            logger.warning(ex)
-        finally:
-            default = config.get('SERVER').get('EX')[0]
-            self.server = config.get('BESTIP').get('EX', default)
+        bestip_val = config.get('BESTIP').get('EX') if config.get('BESTIP') else None
+        if bestip_val and isinstance(bestip_val, (tuple, list)) and len(bestip_val) == 2:
+            self.server = tuple(bestip_val)
+        else:
+            ex_list = config.get('SERVER', {}).get('EX', [])
+            self.server = tuple(ex_list[0][1:]) if ex_list else ('47.112.95.207', 7720)
 
         for x in ['verbose', 'server', 'quiet']:
             if x in kwargs.keys():
