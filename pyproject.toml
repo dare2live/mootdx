@@ -5,8 +5,8 @@ description = "通达信全量数据接入层 — 沪深A股行情/财务/板块
 authors = ["bopo <ibopo@126.com>"]
 readme = "README.md"
 license = "MIT license"
-homepage = "https://github.com/dare2live/mootdx"
-repository = "https://github.com/dare2live/mootdx"
+homepage = "https://github.com/dare2live/tdxhub"
+repository = "https://github.com/dare2live/tdxhub"
 classifiers = [
     "Development Status :: 4 - Beta",
     "Intended Audience :: Developers",

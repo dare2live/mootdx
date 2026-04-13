@@ -1,128 +1,160 @@
-100%使用AI做的fix版本，all credits goes to 原作者https://github.com/mootdx/mootdx。
+# tdxhub
 
+tdxhub 是一个基于 mootdx 的维护中 fork，定位是通达信数据接入层，面向沪深 A 股、ETF、指数以及部分扩展市场的数据抓取、解析与落地。
 
-[![image](https://badge.fury.io/py/mootdx.svg)](http://badge.fury.io/py/mootdx)
-[![image](https://img.shields.io/travis/bopo/mootdx.svg)](https://travis-ci.org/mootdx/mootdx)
-[![Documentation Status](https://readthedocs.org/projects/mootdx/badge/?version=latest)](https://mootdx.readthedocs.io/zh/latest/?badge=latest)
-[![Updates](https://pyup.io/repos/github/mootdx/mootdx/shield.svg)](https://pyup.io/repos/github/mootdx/mootdx/)
+这个仓库当前用于实际项目接入，因此 README 以本 fork 的真实状态为准，不再沿用上游的官网、镜像和发布说明。
 
-如果喜欢本项目可以在右上角给颗⭐！你的支持是我最大的动力😎！
+## 项目定位
 
-**郑重声明: 本项目只作学习交流, 不得用于任何商业目的.**
+- 仓库地址: <https://github.com/dare2live/tdxhub>
+- 上游来源: <https://github.com/mootdx/mootdx>
+- Python 包名: `mootdx`
+- 当前版本: `0.12.0`
+- Python 版本: `3.9+`
+- 开源协议: MIT
 
--   开源协议: MIT license
--   在线文档: <https://www.mootdx.com>
--   国内镜像: <https://gitee.com/ibopo/mootdx>
--   项目仓库: <https://github.com/mootdx/mootdx>
--   问题交流: <https://github.com/mootdx/mootdx/issues>
-
-版本更新(倒序)
---------------
-
-版本更新日志: <https://mootdx.readthedocs.io/zh_CN/latest/history/>
-
-运行环境
---------
-
--   操作系统: Windows / MacOS / Linux 都可以运行.
--   Python: 3.8 以及以上版本.
-
-安装方法
---------
-
-> 新手建议使用 `pip install -U 'mootdx[all]'` 安装
-
-### PIP 安装方法
-```shell
-
-# 包含核心依赖安装
-pip install 'mootdx'
-
-# 包含命令行依赖安装, 如果使用命令行工具可以使用这种方式安装
-pip install 'mootdx[cli]'
-
-# 包含所有扩展依赖安装, 如果不清楚各种依赖关系就用这个命令
-pip install 'mootdx[all]'
-```
-
-### 升级安装
-
-```shell
-pip install -U tdxpy mootdx
-```
-
-> 如果不清楚各种依赖关系就用这个命令 `pip install -U 'mootdx[all]'`
-
-使用说明
---------
-
-> 以下只列举一些例子, 详细说明请查看在线文档: <https://www.mootdx.com>
-
-通达信离线数据读取
+注意: 仓库名是 tdxhub，但为了兼容既有项目，导入路径和命令行入口仍然保留为 `mootdx`。
 
 ```python
-from mootdx.reader import Reader
-
-# market 参数 std 为标准市场(就是股票), ext 为扩展市场(期货，黄金等)
-# tdxdir 是通达信的数据目录, 根据自己的情况修改
-
-reader = Reader.factory(market='std', tdxdir='C:/new_tdx')
-
-# 读取日线数据
-reader.daily(symbol='600036')
-
-# 读取分钟数据
-reader.minute(symbol='600036')
-
-# 读取时间线数据
-reader.fzline(symbol='600036')
+from mootdx.quotes import Quotes
+from mootdx.affair import Affair
 ```
 
-通达信线上行情读取
+## 当前能力范围
+
+### 1. 标准市场行情
+
+- 实时行情快照: `quotes`
+- K 线: `bars`、`index_bars`、`k`
+- 证券清单与市场信息: `stocks`、`stock_count`
+- 分时/分笔: `minute`、`minutes`、`transaction`、`transactions`
+- 基本面与资料: `finance`、`xdxr`、`block`、`F10C`、`F10`
+
+### 2. 扩展市场行情
+
+- 市场列表: `markets`
+- 合约列表: `instruments` / `instrument`
+- 实时报价: `quote`
+- K 线与分时: `bars`、`minute`、`minutes`
+- 分笔成交: `transaction`、`transactions`
+
+### 3. 财务文件能力
+
+- `Affair.files()` 获取远程财务文件清单
+- `Affair.fetch()` 下载单个或全部文件
+- `Affair.parse()` 解析 gpcw 财务文件为 DataFrame
+
+### 4. 本地离线数据读取
+
+- `Reader.factory(...).daily()`
+- `Reader.factory(...).minute()`
+- `Reader.factory(...).fzline()`
+
+### 5. 能力目录
+
+仓库内置了能力清单模块，便于直接查看当前封装了哪些通达信能力:
+
+```python
+from mootdx.capabilities import CAPABILITIES, summary
+
+summary()
+print(CAPABILITIES['std_quotes'])
+```
+
+## 安装
+
+这个 fork 当前推荐直接从 GitHub 安装，而不是依赖上游 README 里的旧链接。
+
+### 直接安装
+
+```bash
+pip install -U "git+https://github.com/dare2live/tdxhub.git"
+```
+
+### 本地开发安装
+
+```bash
+git clone https://github.com/dare2live/tdxhub.git
+cd tdxhub
+pip install -e .
+```
+
+### Poetry
+
+```bash
+poetry install
+```
+
+## 快速示例
+
+### 在线行情
 
 ```python
 from mootdx.quotes import Quotes
 
-# 标准市场
 client = Quotes.factory(market='std', multithread=True, heartbeat=True)
 
-# k 线数据
-client.bars(symbol='600036', frequency=9, offset=10)
+# 实时行情
+client.quotes(symbol=['600036', '000001'])
 
-# 指数
-client.index(symbol='000001', frequency=9)
+# 日线
+client.bars(symbol='600036', frequency=9, offset=800)
 
-# 分钟
-client.minute(symbol='000001')
+# 指数日线
+client.index_bars(symbol='000001', frequency=9, offset=800)
+
+# 财务摘要
+client.finance(symbol='600036')
+
+# 除权除息
+client.xdxr(symbol='600036')
 ```
 
-通达信财务数据读取
+### 财务文件
 
 ```python
 from mootdx.affair import Affair
 
-# 远程文件列表
 files = Affair.files()
+filename = files[0]['filename']
 
-# 下载单个
-Affair.fetch(downdir='tmp', filename='gpcw19960630.zip')
-
-# 下载全部
-Affair.parse(downdir='tmp')
+Affair.fetch(downdir='tmp', filename=filename)
+df = Affair.parse(downdir='tmp', filename=filename)
 ```
 
-加微信交流
-----------
+### 离线数据读取
 
-![](docs/img/IMG_2851.JPG)
+```python
+from mootdx.reader import Reader
 
-常见问题
---------
+reader = Reader.factory(market='std', tdxdir='C:/new_tdx')
+daily = reader.daily(symbol='600036')
+minute = reader.minute(symbol='600036')
+fzline = reader.fzline(symbol='600036')
+```
 
-M1 mac 系统PyMiniRacer不能使用，访问:
-<https://github.com/sqreen/PyMiniRacer/issues/143>
+## 命令行
 
+安装后可以直接使用 `mootdx` 命令:
 
-## Stargazers over time
+```bash
+mootdx --help
+mootdx bestip -l 5
+mootdx quotes -s 600036 -a daily
+mootdx affair -l
+mootdx affair -f gpcw20241231.zip -d output
+```
 
-[![Stargazers over time](https://starchart.cc/mootdx/mootdx.svg)](https://starchart.cc/mootdx/mootdx)
+如果你需要先选择较优行情节点，可以先运行 `mootdx bestip`。
+
+## 与上游的关系
+
+- 本仓库基于 mootdx 演进，但不再照搬上游 README、官网和镜像链接。
+- 仓库名改为 tdxhub，用于表达“通达信数据接入层”的定位。
+- 包名保持 `mootdx`，这是兼容性选择，不代表当前 GitHub 仓库仍是上游项目本身。
+- 文档优先描述这个 fork 当前已经实现并正在维护的内容。
+
+## 问题与贡献
+
+- 问题反馈: <https://github.com/dare2live/tdxhub/issues>
+- 代码仓库: <https://github.com/dare2live/tdxhub>

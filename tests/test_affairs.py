@@ -5,6 +5,7 @@ from pathlib import Path
 import pytest
 
 from mootdx.affair import Affair
+from mootdx.financial.financial import Financial
 from mootdx.logger import logger
 
 
@@ -39,6 +40,25 @@ class TestAffair(unittest.TestCase):
     def test_fetch_one(self):
         Affair.fetch(downdir=self.downdir, filename=self.files[-1])
         self.assertTrue(Path(self.downdir, self.files[-1]).exists())
+
+
+def test_to_df_keeps_only_requested_gpcw_columns():
+    data = [('000001', 20260331, 1.23, 4.56)]
+
+    df = Financial.to_df(data, columns=['report_date', '基本每股收益', '每股净资产'])
+
+    assert list(df.columns) == ['report_date', '基本每股收益', '每股净资产']
+    assert df.loc['000001', '基本每股收益'] == pytest.approx(1.23)
+    assert df.loc['000001', '每股净资产'] == pytest.approx(4.56)
+
+
+def test_to_df_can_drop_report_date_from_projection():
+    data = [('000001', 20260331, 1.23, 4.56)]
+
+    df = Financial.to_df(data, columns=['基本每股收益', '每股净资产'])
+
+    assert list(df.columns) == ['基本每股收益', '每股净资产']
+    assert df.loc['000001', '基本每股收益'] == pytest.approx(1.23)
 
 
 if __name__ == '__main__':

@@ -11,7 +11,35 @@ from tdxpy.hq import TdxHq_API
 
 from ..logger import logger
 from .base import BaseFinancial
-from .columns import columns
+from .columns import columns as financial_columns
+
+
+def _normalize_selected_columns(selected_columns):
+    if selected_columns is None:
+        return None
+
+    if isinstance(selected_columns, str):
+        selected_columns = [selected_columns]
+
+    normalized = []
+    missing = []
+    for name in selected_columns:
+        if name == 'code':
+            continue
+        if name not in financial_columns:
+            missing.append(name)
+            continue
+        if name not in normalized:
+            normalized.append(name)
+
+    if missing:
+        raise ValueError(f'Unknown gpcw columns: {missing}')
+
+    return tuple(normalized)
+
+
+def _projected_column_names(selected_columns):
+    return ['report_date'] + [name for name in selected_columns if name != 'report_date']
 
 
 class FinancialReader(object):
@@ -29,7 +57,7 @@ class FinancialReader(object):
         crawler = Financial()
 
         with open(filename, 'rb') as fp:
-            data = crawler.parse(download_file=fp)
+            data = crawler.parse(download_file=fp, **kwargs)
 
         return crawler.to_df(data, **kwargs)
 
@@ -133,6 +161,15 @@ class Financial(BaseFinancial):
         :return:
         """
 
+        selected_columns = _normalize_selected_columns(kwargs.get('columns'))
+        selected_field_indexes = None
+        if selected_columns is not None:
+            selected_field_indexes = [
+                financial_columns.index(name) - 1
+                for name in selected_columns
+                if name != 'report_date'
+            ]
+
         header_pack_format = '<1hI1H3L'
         tmpdir = tempfile.gettempdir()
 
@@ -186,7 +223,10 @@ class Financial(BaseFinancial):
 
             info_data = dat_file.read(calcsize(report_pack_format))
             cw_info = unpack(report_pack_format, info_data)
-            one_record = (code, report_date) + cw_info
+            if selected_field_indexes is None:
+                one_record = (code, report_date) + cw_info
+            else:
+                one_record = (code, report_date) + tuple(cw_info[index] for index in selected_field_indexes)
             results.append(one_record)
 
         if download_file.name.endswith('.zip'):
@@ -198,7 +238,7 @@ class Financial(BaseFinancial):
         return results
 
     @staticmethod
-    def to_df(data, header='zh'):
+    def to_df(data, header='zh', columns=None):
         """
         转换数据为 pandas DataFrame 格式
 
@@ -210,6 +250,7 @@ class Financial(BaseFinancial):
         if len(data) == 0 or len(data[0]) == 0:
             return pd.DataFrame(data=None)
 
+        selected_columns = _normalize_selected_columns(columns)
         column = ['code', 'report_date']
 
         for i in range(1, len(data[0]) - 1):
@@ -218,12 +259,20 @@ class Financial(BaseFinancial):
         df = pd.DataFrame(data=data, columns=column)
         df.set_index('code', inplace=True)
 
-        if header == 'zh':
-            for i, v in enumerate(df.columns):
-                if i >= len(columns):
-                    columns.append(v)
+        if selected_columns is not None:
+            df.columns = _projected_column_names(selected_columns)
+            if 'report_date' not in selected_columns and 'report_date' in df.columns:
+                df.drop(columns=['report_date'], inplace=True)
 
-            df.columns = columns
+            logger.debug(df.shape)
+            return df
+
+        if header == 'zh':
+            resolved_columns = list(financial_columns)
+            if len(df.columns) > len(resolved_columns):
+                resolved_columns.extend(list(df.columns[len(resolved_columns):]))
+
+            df.columns = resolved_columns[:len(df.columns)]
 
         logger.debug(df.shape)
 
