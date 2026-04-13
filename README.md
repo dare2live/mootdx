@@ -1,6 +1,5 @@
-100%使用AI做的fix版本，all credits goes to 原作者。
-通达信数据读取接口
-==================
+100%使用AI做的fix版本，all credits goes to 原作者https://github.com/mootdx/mootdx。
+
 
 [![image](https://badge.fury.io/py/mootdx.svg)](http://badge.fury.io/py/mootdx)
 [![image](https://img.shields.io/travis/bopo/mootdx.svg)](https://travis-ci.org/mootdx/mootdx)
