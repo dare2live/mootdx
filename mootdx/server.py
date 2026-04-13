@@ -5,7 +5,6 @@ import socket
 import time
 from functools import partial
 
-from tdxpy.constants import hq_hosts
 from tdxpy.exhq import TdxExHq_API
 from tdxpy.hq import TdxHq_API
 
@@ -16,8 +15,10 @@ from mootdx.consts import HQ_HOSTS
 from mootdx.logger import logger
 from mootdx.utils import get_config_path
 
+# HQ_HOSTS 已在 consts.py 中合并了 tdxpy + mootdx 全部服务器（117 台去重）
+# 无需再从 tdxpy.constants 导入 hq_hosts
 hosts = {
-    'HQ': [{'addr': hs[1], 'port': hs[2], 'time': 0, 'site': hs[0]} for hs in hq_hosts + HQ_HOSTS],
+    'HQ': [{'addr': hs[1], 'port': hs[2], 'time': 0, 'site': hs[0]} for hs in HQ_HOSTS],
     'EX': [{'addr': hs[1], 'port': hs[2], 'time': 0, 'site': hs[0]} for hs in EX_HOSTS],
     'GP': [{'addr': hs[1], 'port': hs[2], 'time': 0, 'site': hs[0]} for hs in GP_HOSTS],
 }
