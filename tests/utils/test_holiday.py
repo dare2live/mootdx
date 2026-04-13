@@ -6,10 +6,12 @@ import pytest
 from mootdx import get_config_path
 
 try:
-    import py_mini_racer
+    from py_mini_racer import MiniRacer
+
+    MiniRacer()
 
     not_mini_racer = False
-except ImportError:
+except Exception:
     not_mini_racer = True
 
 

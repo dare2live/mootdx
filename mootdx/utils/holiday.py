@@ -23,8 +23,8 @@ def holidays() -> pd.DataFrame:
     try:
         from py_mini_racer import MiniRacer
     except (ImportError, ModuleNotFoundError):
-        logging.warning('!!! 缺少依赖, 请使用次命令进行安装: pip install mini_racer')
-        raise MootdxModuleNotFoundError('!!! 缺少依赖, 请使用次命令进行安装: pip install mini_racer')
+        logging.warning('!!! 缺少依赖, 请安装 mootdx[racer] 或 mini-racer（导入模块名仍为 py_mini_racer）')
+        raise MootdxModuleNotFoundError('!!! 缺少依赖, 请安装 mootdx[racer] 或 mini-racer（导入模块名仍为 py_mini_racer）')
 
     cache_file = get_config_path('caches/holidays.plk')
 
@@ -94,7 +94,7 @@ def holiday(date=None, format_=None, country=None, result=False):
             date = datetime.datetime.strptime(date, format_).date()
         else:
             date = datetime.datetime.now().date()
-    except ValueError as ex:
+    except ValueError:
         logger.error('日期或者日期格式错误!')
         return None
 

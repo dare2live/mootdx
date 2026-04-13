@@ -1,55 +1,45 @@
-# 命令行使用说明
+# 本地数据读取命令
 
-`mootdx reader` 是一个命令行程序，目前功能比较简单，可以用来读取TDX导出的日线行情数据
+`reader` 用于读取通达信本地目录里的离线数据文件。和 `quotes` 不同，这条命令不走在线行情服务器，而是直接读本地 `vipdoc` 数据。
 
-使用方法如下：
-
+```shell
+python -m mootdx reader --help
 ```
-mootdx reader --help
 
-Usage: mootdx reader [OPTIONS]
+当前实际支持的参数如下：
+
+```shell
+Usage: python -m mootdx reader [OPTIONS]
 
   读取股票本地行情数据.
 
 Options:
-  -d, --tdxdir TEXT  TDX数据目录.
+  -h, --help         Show this message and exit.
+  -d, --tdxdir TEXT  通达信数据目录.
   -s, --symbol TEXT  股票代码.
-  -a, --action TEXT  操作类型 (daily:日线, minute:一分钟线, fzline:五分钟线).
+  -a, --action TEXT  操作类型 (daily: 日线, minute: 一分钟线, fzline: 五分钟线).
   -m, --market TEXT  证券市场, 默认 std (std: 标准股票市场, ext: 扩展市场).
-  -o, --output TEXT  输出文件, 支持CSV, HDF5, Excel等格式.
-  --help             Show this message and exit.
-
+  -o, --output TEXT  输出文件, 支持 CSV, HDF5, Excel 等格式.
 ```
 
-# 读取日线数据
+## 示例
 
-`-o` 参数导出数据
+读取日线并导出：
 
 ```shell
-mootdx reader --tdxdir ../fixtures -s 600000 -a daily -o dt.csv
-
-写入到文件 : dt.csv
-
+python -m mootdx reader --tdxdir ../fixtures -s 600000 -a daily -o daily.csv
 ```
 
-# 读取分钟数据
-
-`-o` 参数导出数据
+读取一分钟线：
 
 ```shell
-mootdx reader --tdxdir ../fixtures -s 600000 -a minute -o dt.csv
-
-写入到文件 : dt.csv
-
+python -m mootdx reader --tdxdir ../fixtures -s 600000 -a minute -o minute.csv
 ```
 
-# 读取5分钟数据
-
-`-o` 参数导出数据
+读取五分钟线：
 
 ```shell
-mootdx reader --tdxdir ../fixtures -s 600000 -a fzline -o dt.csv
-
-写入到文件 : dt.csv
-
+python -m mootdx reader --tdxdir ../fixtures -s 600000 -a fzline -o fzline.csv
 ```
+
+如果你的项目需要批量离线读取多个本地文件，更推荐直接调用 `Reader.factory(...)`，而不是循环 shell 调这条命令。

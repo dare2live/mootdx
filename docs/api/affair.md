@@ -72,5 +72,7 @@ result.to_excel('gpcw20170930.xls')
 写入到文件 : `gpcw20170930.csv`
 
 ```shell
-mootdx affair -f gpcw20000930.zip -o gpcw20170930.csv
+python -m mootdx affair -p gpcw20170930.zip -d output -o gpcw20170930.csv
 ```
+
+说明：这里应当使用 `-p/--parse` 解析文件，而不是 `-f/--fetch`。如果本地目录里还没有对应文件，当前 CLI 会先尝试下载，再执行解析。

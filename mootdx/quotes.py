@@ -1,5 +1,8 @@
 import math
 from datetime import datetime
+from typing import Any
+from typing import Optional
+from typing import Union
 
 import pandas
 import pandas as pd
@@ -26,9 +29,14 @@ from mootdx.utils import get_stock_markets
 from mootdx.utils import to_data
 
 
+ServerAddress = tuple[str, int]
+SymbolInput = Union[str, list[str]]
+MarketSymbol = tuple[int, str]
+
+
 class Quotes(object):
     @staticmethod
-    def factory(market='std', **kwargs):
+    def factory(market: str = 'std', **kwargs: Any) -> 'BaseQuotes':
         """
         股票市场 工厂方法
 
@@ -37,15 +45,13 @@ class Quotes(object):
         :return: object
         """
 
-        logger.debug(kwargs)
-
         if market == 'ext':
             return ExtQuotes(**kwargs)
 
         return StdQuotes(**kwargs)
 
 
-def valid_server(server):
+def valid_server(server: Any) -> Optional[ServerAddress]:
     import ipaddress
 
     if isinstance(server, str) and ':' in server:
@@ -69,57 +75,58 @@ def valid_server(server):
 
 
 class BaseQuotes(object):
-    client = None
-    bestip = None
-    server = None
+    client: Any = None
+    bestip: Optional[ServerAddress] = None
+    server: Optional[ServerAddress] = None
 
     verbose = False
     timeout = 15
 
-    def __init__(self, server=None, bestip: bool = False, timeout: int = None, **kwargs) -> None:
-        logger.debug('config.setup()')
+    def __init__(
+        self,
+        server: Any = None,
+        bestip: bool = False,
+        timeout: Optional[int] = None,
+        **kwargs: Any,
+    ) -> None:
         config.setup()
 
-        logger.debug(f'server => {server}')
         self.server = valid_server(server)
-
-        logger.debug(f'bestip => {bestip}')
         bestip and check_server(sync=True)
 
         self.timeout = timeout or 15
-        logger.debug(f'timeout => {self.timeout}')
 
         self.verbose = kwargs.get('verbose', False)
-        logger.debug(f'verbose => {self.verbose}')
 
-    def __del__(self):
-        logger.debug('call __del__')
+    def __del__(self) -> None:
         self.close()
 
-    def reconnect(self):
-        if self.closed:
-            logger.debug('服务器连接已断开，正进行重新连接...')
-            self.client.connect(*self.bestip)
+    def reconnect(self) -> None:
+        target_server = self.bestip or self.server
 
-    def close(self):
-        logger.debug('close')
+        if self.closed and target_server:
+            self.client.connect(*target_server)
+
+    def close(self) -> None:
         hasattr(self.client, 'close') and self.client.close()
 
     @property
     def closed(self) -> bool:
-        if not hasattr(self.client.client, '_closed') or getattr(self.client.client, '_closed'):
+        transport = getattr(self.client, 'client', None)
+
+        if not hasattr(transport, '_closed') or getattr(transport, '_closed', True):
             return True
 
         return False
 
-    def pool(self):
+    def pool(self) -> None:
         ...
 
 
-instance: BaseQuotes
+instance: Optional[BaseQuotes] = None
 
 
-def check_empty(value):
+def check_empty(value: Any) -> bool:
     """
     重试判断函数
 
@@ -140,8 +147,16 @@ class StdQuotes(BaseQuotes):
     """
     股票市场实时行情"""
 
-    def __init__(self, server=None, bestip=False, timeout=15, heartbeat=False, auto_retry=True, raise_exception=False,
-                 **kwargs):
+    def __init__(
+        self,
+        server: Any = None,
+        bestip: bool = False,
+        timeout: int = 15,
+        heartbeat: bool = False,
+        auto_retry: bool = True,
+        raise_exception: bool = False,
+        **kwargs: Any,
+    ) -> None:
         """构造函数
 
         :param bestip:  最佳 IP
@@ -161,7 +176,7 @@ class StdQuotes(BaseQuotes):
             hq_list = config.get('SERVER', {}).get('HQ', [])
             self.server = tuple(hq_list[0][1:]) if hq_list else ('110.41.147.114', 7709)
 
-        logger.debug(f'server: {self.server}')
+        self.bestip = self.server
         ip, port = self.server
 
         self.client = TdxHq_API(heartbeat=heartbeat, auto_retry=auto_retry, raise_exception=raise_exception)
@@ -170,10 +185,10 @@ class StdQuotes(BaseQuotes):
         global instance
         instance = self
 
-    def traffic(self):
+    def traffic(self) -> Any:
         return self.client.get_traffic_stats()
 
-    def quotes(self, symbol=None, **kwargs):
+    def quotes(self, symbol: Optional[SymbolInput] = None, **kwargs: Any) -> pd.DataFrame:
         """
         获取实时日行情数据
 
@@ -184,7 +199,7 @@ class StdQuotes(BaseQuotes):
         if not symbol:
             return to_data(None)
 
-        if type(symbol) is str:
+        if isinstance(symbol, str):
             symbol = [symbol]
 
         try:
@@ -195,7 +210,14 @@ class StdQuotes(BaseQuotes):
 
         return to_data(result, symbol=symbol, client=self, **kwargs)
 
-    def bars(self, symbol='000001', frequency=9, start=0, offset=800, **kwargs):
+    def bars(
+        self,
+        symbol: str = '000001',
+        frequency: Union[int, str] = 9,
+        start: int = 0,
+        offset: int = 800,
+        **kwargs: Any,
+    ) -> pd.DataFrame:
         """
         获取实时日K线数据
 
@@ -213,7 +235,7 @@ class StdQuotes(BaseQuotes):
 
         return to_data(result, symbol=symbol, client=self, **kwargs)
 
-    def stock_count(self, market=MARKET_SH):
+    def stock_count(self, market: int = MARKET_SH) -> int:
         """
         获取市场股票数量
 
@@ -227,7 +249,7 @@ class StdQuotes(BaseQuotes):
 
         return result
 
-    def stocks(self, market=MARKET_SH):
+    def stocks(self, market: int = MARKET_SH) -> Optional[pd.DataFrame]:
         """
         获取股票列表
 
@@ -248,7 +270,7 @@ class StdQuotes(BaseQuotes):
 
         return stocks
 
-    def stock_all(self):
+    def stock_all(self) -> Optional[pd.DataFrame]:
         stocks = None
 
         for m in [0, 1]:
@@ -256,7 +278,14 @@ class StdQuotes(BaseQuotes):
 
         return stocks
 
-    def index_bars(self, symbol='000001', frequency=9, start=0, offset=800, **kwargs):
+    def index_bars(
+        self,
+        symbol: str = '000001',
+        frequency: Union[int, str] = 9,
+        start: int = 0,
+        offset: int = 800,
+        **kwargs: Any,
+    ) -> pd.DataFrame:
         """
         获取指数k线
 
@@ -275,7 +304,7 @@ class StdQuotes(BaseQuotes):
 
         return to_data(result, symbol=symbol, client=self, **kwargs)
 
-    def minute(self, symbol=None, **kwargs):
+    def minute(self, symbol: Optional[str] = None, **kwargs: Any) -> pd.DataFrame:
         """
         获取实时分时数据
 
@@ -286,7 +315,7 @@ class StdQuotes(BaseQuotes):
         today = datetime.now().strftime('%Y%m%d')
         return self.minutes(symbol=symbol, date=today, **kwargs)
 
-    def minutes(self, symbol=None, date='20191023', **kwargs):
+    def minutes(self, symbol: Optional[str] = None, date: str = '20191023', **kwargs: Any) -> pd.DataFrame:
         """
         分时历史数据
 
@@ -304,7 +333,7 @@ class StdQuotes(BaseQuotes):
 
         return to_data(result, symbol=symbol, client=self, **kwargs)
 
-    def transaction(self, symbol='', start=0, offset=800, **kwargs):
+    def transaction(self, symbol: str = '', start: int = 0, offset: int = 800, **kwargs: Any) -> pd.DataFrame:
         """
         查询分笔成交
 
@@ -320,7 +349,14 @@ class StdQuotes(BaseQuotes):
 
         return to_data(result, symbol=symbol, client=self, **kwargs)
 
-    def transactions(self, symbol='', start=0, offset=800, date='20170209', **kwargs):
+    def transactions(
+        self,
+        symbol: str = '',
+        start: int = 0,
+        offset: int = 800,
+        date: str = '20170209',
+        **kwargs: Any,
+    ) -> pd.DataFrame:
         """
         查询历史分笔成交
 
@@ -339,7 +375,7 @@ class StdQuotes(BaseQuotes):
         result = self.client.get_history_transaction_data(market, symbol, start, offset, int(date))
         return to_data(result, symbol=symbol, client=self, **kwargs)
 
-    def F10C(self, symbol=''):  # noqa
+    def F10C(self, symbol: str = '') -> Any:  # noqa: N802
         """
         查询公司信息目录
 
@@ -356,7 +392,7 @@ class StdQuotes(BaseQuotes):
 
         return result
 
-    def F10(self, symbol='', name=''):  # noqa
+    def F10(self, symbol: str = '', name: str = '') -> Any:  # noqa: N802
         """
         读取公司信息详情
 
@@ -365,7 +401,7 @@ class StdQuotes(BaseQuotes):
         :return: pd.dataFrame or None
         """
 
-        result = {}
+        result: dict[str, Any] = {}
         market = int(get_stock_market(symbol, string=False))
 
         if market not in [0, 1]:
@@ -394,7 +430,7 @@ class StdQuotes(BaseQuotes):
 
         return result
 
-    def xdxr(self, symbol='', **kwargs):
+    def xdxr(self, symbol: str = '', **kwargs: Any) -> pd.DataFrame:
         """
         读取除权除息信息
 
@@ -407,7 +443,7 @@ class StdQuotes(BaseQuotes):
 
         return to_data(result, symbol=symbol, client=self, **kwargs)
 
-    def finance(self, symbol='000001', **kwargs):
+    def finance(self, symbol: str = '000001', **kwargs: Any) -> pd.DataFrame:
         """
         读取财务信息
 
@@ -420,7 +456,13 @@ class StdQuotes(BaseQuotes):
 
         return to_data(result, symbol=symbol, client=self, **kwargs)
 
-    def k(self, symbol='', begin=None, end=None, **kwargs):
+    def k(
+        self,
+        symbol: str = '',
+        begin: Optional[str] = None,
+        end: Optional[str] = None,
+        **kwargs: Any,
+    ) -> pd.DataFrame:
         """
         读取k线信息
 
@@ -433,10 +475,10 @@ class StdQuotes(BaseQuotes):
         result = self.get_k_data(symbol, begin, end)
         return to_data(result, symbol=symbol, **kwargs)
 
-    def ohlc(self, **kwargs):
+    def ohlc(self, **kwargs: Any) -> pd.DataFrame:
         return self.k(**kwargs)
 
-    def get_k_data(self, code, start_date, end_date):
+    def get_k_data(self, code: str, start_date: str, end_date: str) -> pd.DataFrame:
         # 开始时间离现在有几天
         first = (pd.to_datetime(end_date) - pd.to_datetime(datetime.now().date())).days
         first = (abs(first), 0)[first >= 0]
@@ -465,7 +507,14 @@ class StdQuotes(BaseQuotes):
 
         return data
 
-    def index(self, symbol='000001', frequency=9, start=0, offset=800, **kwargs):
+    def index(
+        self,
+        symbol: str = '000001',
+        frequency: Union[int, str] = 9,
+        start: int = 0,
+        offset: int = 800,
+        **kwargs: Any,
+    ) -> pd.DataFrame:
         """
         获取指数k线
 
@@ -498,7 +547,7 @@ class StdQuotes(BaseQuotes):
 
         return to_data(result, symbol=symbol, client=self, **kwargs)
 
-    def block(self, tofile='block.dat', **kwargs):
+    def block(self, tofile: str = 'block.dat', **kwargs: Any) -> pd.DataFrame:
         """
         获取证券板块信息
 
@@ -515,7 +564,7 @@ class ExtQuotes(BaseQuotes):
 
     # server = ("112.74.214.43", 7727)
 
-    def __init__(self, server: list = None, bestip=False, timeout=15, **kwargs):
+    def __init__(self, server: Any = None, bestip: bool = False, timeout: int = 15, **kwargs: Any) -> None:
         """
         构造函数
 
@@ -537,9 +586,10 @@ class ExtQuotes(BaseQuotes):
             ex_list = config.get('SERVER', {}).get('EX', [])
             self.server = tuple(ex_list[0][1:]) if ex_list else ('47.112.95.207', 7720)
 
+        self.bestip = self.server
+
         for x in ['verbose', 'server', 'quiet']:
-            if x in kwargs.keys():
-                del kwargs[x]
+            kwargs.pop(x, None)
 
         try:
             self.client = TdxExHq_API(raise_exception=False, auto_retry=True, **kwargs)
@@ -551,7 +601,7 @@ class ExtQuotes(BaseQuotes):
         instance = self
 
     @staticmethod
-    def validate(market, symbol):
+    def validate(market: Optional[Union[int, str]], symbol: str) -> MarketSymbol:
         """
         验证股票市场
 
@@ -576,7 +626,7 @@ class ExtQuotes(BaseQuotes):
         retry_error_callback=return_last_value,
         retry=(retry_if_exception_type() | retry_if_result(check_empty)),
     )
-    def markets(self, **kwargs):
+    def markets(self, **kwargs: Any) -> pd.DataFrame:
         """
         获取实时市场列表
 
@@ -592,7 +642,7 @@ class ExtQuotes(BaseQuotes):
         retry_error_callback=return_last_value,
         retry=(retry_if_exception_type() | retry_if_result(check_empty)),
     )
-    def instrument(self, start=0, offset=800, **kwargs):
+    def instrument(self, start: int = 0, offset: int = 800, **kwargs: Any) -> pd.DataFrame:
         """
         查询代码列表
 
@@ -610,7 +660,7 @@ class ExtQuotes(BaseQuotes):
         retry_error_callback=return_last_value,
         retry=(retry_if_exception_type() | retry_if_result(check_empty)),
     )
-    def instrument_count(self):
+    def instrument_count(self) -> int:
         """
         市场商品数量
 
@@ -627,14 +677,14 @@ class ExtQuotes(BaseQuotes):
         retry_error_callback=return_last_value,
         retry=(retry_if_exception_type() | retry_if_result(check_empty)),
     )
-    def instruments(self, **kwargs):
+    def instruments(self, **kwargs: Any) -> pd.DataFrame:
         """
         查询所有代码列表
 
         :return:
         """
 
-        result = []
+        result: list[Any] = []
 
         count = self.client.get_instrument_count()
         pages = math.ceil(count / 100)
@@ -650,7 +700,12 @@ class ExtQuotes(BaseQuotes):
         retry_error_callback=return_last_value,
         retry=(retry_if_exception_type() | retry_if_result(check_empty)),
     )
-    def quote(self, market='', symbol='', **kwargs):
+    def quote(
+        self,
+        market: Optional[Union[int, str]] = '',
+        symbol: str = '',
+        **kwargs: Any,
+    ) -> pd.DataFrame:
         """
         查询五档行情
 
@@ -670,7 +725,12 @@ class ExtQuotes(BaseQuotes):
         retry_error_callback=return_last_value,
         retry=(retry_if_exception_type() | retry_if_result(check_empty)),
     )
-    def minute(self, market='', symbol='', **kwargs):
+    def minute(
+        self,
+        market: Optional[Union[int, str]] = '',
+        symbol: str = '',
+        **kwargs: Any,
+    ) -> pd.DataFrame:
         """
         查询分时行情
 
@@ -690,7 +750,13 @@ class ExtQuotes(BaseQuotes):
         retry_error_callback=return_last_value,
         retry=(retry_if_exception_type() | retry_if_result(check_empty)),
     )
-    def minutes(self, market=None, symbol='', date='', **kwargs):
+    def minutes(
+        self,
+        market: Optional[Union[int, str]] = None,
+        symbol: str = '',
+        date: str = '',
+        **kwargs: Any,
+    ) -> pd.DataFrame:
         """
         查询历史分时行情
 
@@ -711,7 +777,15 @@ class ExtQuotes(BaseQuotes):
         retry_error_callback=return_last_value,
         retry=(retry_if_exception_type() | retry_if_result(check_empty)),
     )
-    def bars(self, frequency='', market='', symbol='', start=0, offset=800, **kwargs):
+    def bars(
+        self,
+        frequency: Union[int, str] = '',
+        market: Optional[Union[int, str]] = '',
+        symbol: str = '',
+        start: int = 0,
+        offset: int = 800,
+        **kwargs: Any,
+    ) -> pd.DataFrame:
         """
         查询k线数据
 
@@ -737,7 +811,14 @@ class ExtQuotes(BaseQuotes):
         retry_error_callback=return_last_value,
         retry=(retry_if_exception_type() | retry_if_result(check_empty)),
     )
-    def transaction(self, market=None, symbol='', start=0, offset=800, **kwargs):
+    def transaction(
+        self,
+        market: Optional[Union[int, str]] = None,
+        symbol: str = '',
+        start: int = 0,
+        offset: int = 800,
+        **kwargs: Any,
+    ) -> pd.DataFrame:
         """
         查询分笔成交
 
@@ -759,7 +840,15 @@ class ExtQuotes(BaseQuotes):
         retry_error_callback=return_last_value,
         retry=(retry_if_exception_type() | retry_if_result(check_empty)),
     )
-    def transactions(self, market=None, symbol='', date='', start=0, offset=800, **kwargs):
+    def transactions(
+        self,
+        market: Optional[Union[int, str]] = None,
+        symbol: str = '',
+        date: str = '',
+        start: int = 0,
+        offset: int = 800,
+        **kwargs: Any,
+    ) -> pd.DataFrame:
         """
         查询历史分笔成交
 

@@ -71,18 +71,36 @@ print(CAPABILITIES['std_quotes'])
 pip install -U "git+https://github.com/dare2live/tdxhub.git"
 ```
 
+如果需要命令行工具：
+
+```bash
+pip install -U "mootdx[cli] @ git+https://github.com/dare2live/tdxhub.git"
+```
+
+如果需要 holiday / JS 扩展运行时：
+
+```bash
+pip install -U "mootdx[racer] @ git+https://github.com/dare2live/tdxhub.git"
+```
+
+如果两者都需要：
+
+```bash
+pip install -U "mootdx[cli,racer] @ git+https://github.com/dare2live/tdxhub.git"
+```
+
 ### 本地开发安装
 
 ```bash
 git clone https://github.com/dare2live/tdxhub.git
 cd tdxhub
-pip install -e .
+pip install -e ".[cli,racer]"
 ```
 
 ### Poetry
 
 ```bash
-poetry install
+poetry install --extras cli --extras racer
 ```
 
 ## 快速示例
@@ -108,6 +126,24 @@ client.finance(symbol='600036')
 
 # 除权除息
 client.xdxr(symbol='600036')
+
+# 分笔 / Tick
+client.transaction(symbol='600036', start=0, offset=10)
+client.transactions(symbol='600036', date='20240201', start=0, offset=10)
+```
+
+### 扩展市场
+
+```python
+from mootdx.quotes import Quotes
+
+ext_client = Quotes.factory(market='ext')
+
+# 五档行情
+ext_client.quote(symbol='42#IMCI')
+
+# 日线
+ext_client.bars(market=31, symbol='00020', frequency=9)
 ```
 
 ### 财务文件
@@ -140,6 +176,7 @@ fzline = reader.fzline(symbol='600036')
 ```bash
 mootdx --help
 mootdx bestip -l 5
+mootdx bestip -c /path/to/connect.cfg -l 10
 mootdx quotes -s 600036 -a daily
 mootdx affair -l
 mootdx affair -f gpcw20241231.zip -d output

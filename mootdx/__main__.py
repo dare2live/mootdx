@@ -76,10 +76,12 @@ def reader(symbol, action, market, tdxdir, output):
 
 @entry.command(help='测试行情服务器.', name='bestip')
 @click.help_option('-h', '--help')
+@click.option('-c', '--connect-cfg', default=None, help='从通达信 connect.cfg 导入服务器列表后再测速.')
 @click.option('-l', '--limit', default=5, help='显示最快前几个，默认 5.')
 @click.option('-v', '--verbose', count=True, help='详细模式')
-def server(limit, verbose):
+def server(connect_cfg, limit, verbose):
     from mootdx.server import bestip
+    from mootdx.server import configure_hosts_from_connect_cfg
 
     if verbose:
         ch = logging.StreamHandler()
@@ -87,6 +89,11 @@ def server(limit, verbose):
 
         logger.addHandler(ch)
         logger.setLevel(logging.DEBUG)
+
+    if connect_cfg:
+        imported = configure_hosts_from_connect_cfg(connect_cfg)
+        counts = ', '.join(f'{key}:{len(value)}' for key, value in imported.items()) if imported else '0'
+        logger.info(f'[√] 已从 {connect_cfg} 导入服务器列表 {counts}')
 
     bestip(limit=limit, console=True, sync=False)
 

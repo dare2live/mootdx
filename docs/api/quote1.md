@@ -1,5 +1,7 @@
 # 标准行情接口
 
+> 说明：仓库名已经切到 `tdxhub`，但导入路径仍然保持为 `mootdx`。如果你是在业务项目里接入这些能力，更推荐先封装一层共享入口，而不是在业务代码里散落直接连接逻辑。
+
 下面是如何在程序里面调用本接口
 
 **参数说明:**
@@ -22,8 +24,8 @@ from mootdx.quotes import Quotes
 client = Quotes.factory(market='std', multithread=True, heartbeat=True, bestip=False, timeout=15)
 # multithread 多线程
 # heartbeat 开启心跳包
-# bestip 重新测试最快服务器
-# server 自行设置服务器IP, 格式 `server=('127.0.0.1', 7727)`
+# bestip 重新测试最快服务器（更适合命令行或初始化阶段，不建议在服务端高频调用里反复触发）
+# server 自行设置服务器IP, 标准行情常见格式 `server=('127.0.0.1', 7709)`
 # timeout 设置超时时间
 # quiet 日志静默方式, 默认False, 设置为 True 则不打印日志信息
 # verbose 日志显示等级 0, 静默模式, 1 一般级别, 2 详细级别
